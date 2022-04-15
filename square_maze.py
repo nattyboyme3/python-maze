@@ -1,6 +1,7 @@
 import colorama
 import random
 from PIL import Image, ImageDraw
+from anytree import Node
 
 class Maze:
     def __init__(self, width, height):
@@ -10,8 +11,8 @@ class Maze:
         self.max_h = height - 1
         self.max_w = width - 1
         self.image_border = 3
-        self.image_multiplier = 20
-        self.wall_border = 4
+        self.image_multiplier = 30
+        self.wall_border = 5
         self.draw_at_end = True
         for i in range(0, height):
             line = []
@@ -19,9 +20,22 @@ class Maze:
                 line.append('u')
             self.maze.append(line)
         self.image = self.set_up_image()
+        self.built = False
+        self.exit = None
+        self.entrance = None
+        self.tree_root = None
 
-    def equals(self, coord, char):
+    def equals(self, coord: tuple, char: str):
         return self.get(coord) == char
+
+    @staticmethod
+    def same(coord1: tuple, coord2: tuple) -> bool:
+        return all([coord1[0]==coord2[0], coord1[1] == coord2[1]])
+
+    @staticmethod
+    def dup(coord: tuple) -> tuple:
+        r = tuple(coord[0],  coord[1])
+        return r
 
     def get(self, coord):
         return self.maze[coord[0]][coord[1]]
@@ -69,14 +83,14 @@ class Maze:
             r.append((coord[0]+1, coord[1]))
         return r
 
-    def get_adj(self, coord):
+    def get_adj(self, coord): # gets a list of all the adjacent cells' contents
         r = list()
         a = self.get_adj_coord(coord)
         for i in a:
             r.append(self.get(i))
         return r
 
-    def adj_equal(self, coord, char):
+    def adj_equal(self, coord, char): # Counts the adjacent cells equal to char
         r = 0
         adj_list = self.get_adj(coord)
         for i in adj_list:
@@ -119,6 +133,13 @@ class Maze:
         r = list()
         for i in self.get_adj_coord(coord):
             if self.get(i) != char:
+                r.append(i)
+        return r
+
+    def get_adj_coord_equal(self, coord, char):
+        r = list()
+        for i in self.get_adj_coord(coord):
+            if self.get(i) == char:
                 r.append(i)
         return r
 
@@ -206,6 +227,7 @@ class Maze:
             coord = (0, index)
             if self.adj_equal(coord, cell_c) > 0:
                 self.set_cell(coord, cell_c)
+                self.entrance = coord
                 break
 
     def add_exit(self, cell_c):
@@ -214,6 +236,7 @@ class Maze:
             coord = (self.max_h, index)
             if self.adj_equal(coord, cell_c) > 0:
                 self.set_cell(coord, cell_c)
+                self.exit = coord
                 break
 
     def set_up_image(self):
@@ -223,3 +246,20 @@ class Maze:
 
     def show_image(self):
         self.image.show()
+
+    def solve(self):
+        if not all([self.exit, self.entrance, self.tree_root]):
+            return False
+        here = self.dup(self.entrance)
+        self.tree_root = Node(self.dup(here))
+        prev = self.tree_root
+        ends = list()
+        ends.append(self.tree_root)
+        solved = False
+        while not solved:
+            here =
+            # Are we solved?
+            if self.same(here, self.exit):
+                solved = True
+                break
+            for n in self.get_adj_coord_equal(prev):

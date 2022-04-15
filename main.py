@@ -34,7 +34,7 @@ if __name__ == '__main__':
         walls.append(i)
         m.set(i, wall)
     retries = 0
-
+    # m.print()
     while walls:
         r = walls[int(random.random()*len(walls))-1]
         if m.adj_equal(r, cell) == 1:
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     m.add_entrance(cell)
     m.add_exit(cell)
 
-    m.print()
+    # m.print()
     print(f'iterated through {retries} walls.')
     m.draw_cells(cell)
     m.show_image()
