@@ -5,7 +5,7 @@ Generates a PNG maze. Thanks to [Orestis Zekai](https://medium.com/swlh/fun-with
 ## Included Maze Types
 ### Square maze
  - Grid
- - Solving isn't working yet
+ - Solving/Optimization isn't working yet
  - Uses grid squares for walls
  - Usage:
     `python square_maze.py <maze_height> <maze_width>`
