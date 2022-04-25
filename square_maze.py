@@ -3,8 +3,9 @@ import random
 from PIL import Image, ImageDraw
 from anytree import Node
 
+
 class Maze:
-    def __init__(self, width, height):
+    def __init__(self, width, height, wall='w', cell='c'):
         self.maze = list()
         self.height = height
         self.width = width
@@ -13,7 +14,8 @@ class Maze:
         self.image_border = 3
         self.image_multiplier = 30
         self.wall_border = 5
-        self.draw_at_end = True
+        self.wall = wall
+        self.cell = cell
         for i in range(0, height):
             line = []
             for j in range(0, width):
@@ -24,6 +26,41 @@ class Maze:
         self.exit = None
         self.entrance = None
         self.tree_root = None
+        start = self.rand_coord(width, height)
+        self.set_cell(start)
+        self.cell = cell
+        walls = list()
+        for i in self.get_adj_coord(start):
+            walls.append(i)
+            self.set(i, wall)
+        retries = 0
+        while walls:
+            r = random.choice(walls)
+            if self.adj_equal(r, cell) == 1:
+                self.set_cell(r)
+                for i in self.get_adj_coord_not(r, self.cell):
+                    walls.append(i)
+                    self.set(i, wall)
+            retries += 1
+            walls.remove(r)
+        self.finish_walls(wall)
+        self.add_entrance()
+        self.add_exit()
+        print(f'iterated through {retries} walls.')
+
+    @staticmethod
+    def rand_coord(width, height):
+        starting_height = int(random.random()*height)
+        starting_width = int(random.random()*width)
+        if starting_height == 0:
+            starting_height += 1
+        if starting_width == 0:
+            starting_width += 1
+        if starting_height == height-1:
+            starting_height -= 1
+        if starting_width == width-1:
+            starting_width -= 1
+        return [starting_width, starting_height]
 
     def equals(self, coord: tuple, char: str):
         return self.get(coord) == char
@@ -34,7 +71,7 @@ class Maze:
 
     @staticmethod
     def dup(coord: tuple) -> tuple:
-        r = tuple(coord[0],  coord[1])
+        r = (coord[0], coord[1])
         return r
 
     def get(self, coord):
@@ -43,29 +80,8 @@ class Maze:
     def set(self, coord, char):
         self.maze[coord[0]][coord[1]] = char
 
-    def set_cell(self, coord, char):
-        self.set(coord, char)
-        if not self.draw_at_end:
-            v_rect_start = (
-                (self.image_border + (self.image_multiplier * coord[1]) + self.wall_border),
-                (self.image_border + (self.image_multiplier * coord[0]))
-            )
-            v_rect_end = (
-                (self.image_border + (self.image_multiplier * coord[1]) + self.image_multiplier - self.wall_border),
-                (self.image_border + (self.image_multiplier * coord[0]) + self.image_multiplier)
-            )
-            h_rect_start = (
-                (self.image_border + (self.image_multiplier * coord[1])),
-                (self.image_border + (self.image_multiplier * coord[0]) + self.wall_border)
-            )
-            h_rect_end = (
-                (self.image_border + (self.image_multiplier * coord[1]) + self.image_multiplier),
-                (self.image_border + (self.image_multiplier * coord[0]) + self.image_multiplier - self.wall_border)
-            )
-            drawing = ImageDraw.Draw(self.image)
-            drawing.rectangle([v_rect_start, v_rect_end], fill='white', outline='white')
-            drawing.rectangle([h_rect_start, h_rect_end], fill='white', outline='white')
-            del drawing
+    def set_cell(self, coord):
+        self.set(coord, self.cell)
 
     def get_adj_coord(self, coord):
         r = list()
@@ -98,25 +114,25 @@ class Maze:
                 r += 1
         return r
 
-    def is_left_cell(self, coord, cell_char):
+    def is_left_cell(self, coord):
         if coord[1] == 0:
             return True
-        return self.equals((coord[0], coord[1]-1), cell_char)
+        return self.equals((coord[0], coord[1]-1), self.cell)
 
-    def is_right_cell(self, coord, cell_char):
+    def is_right_cell(self, coord):
         if coord[1] == self.max_h:
             return True
-        return self.equals((coord[0], coord[1]+1), cell_char)
+        return self.equals((coord[0], coord[1]+1), self.cell)
 
-    def is_up_cell(self, coord, cell_char):
+    def is_up_cell(self, coord):
         if coord[0] == 0:
             return True
-        return self.equals((coord[0]-1, coord[1]), cell_char)
+        return self.equals((coord[0]-1, coord[1]), self.cell)
 
-    def is_down_cell(self, coord, cell_char):
+    def is_down_cell(self, coord):
         if coord[0] == self.max_w:
             return True
-        return self.equals((coord[0]+1, coord[1]), cell_char)
+        return self.equals((coord[0]+1, coord[1]), self.cell)
 
     def print(self):
         for i in range(0, self.height):
@@ -149,12 +165,12 @@ class Maze:
                 if self.maze[i][j] == 'u':
                     self.maze[i][j] = wall_char
 
-    def draw_cells(self, cell_char):
+    def draw_cells(self):
         for i in range(0, self.height):
             for j in range(0, self.width):
                 coord = (j, i)
-                if self.equals(coord, cell_char):
-                    if self.is_left_cell(coord, cell_char):
+                if self.equals(coord, self.cell):
+                    if self.is_left_cell(coord):
                         offset = 0
                         if coord[1] == 0:
                             offset = self.image_border
@@ -171,7 +187,7 @@ class Maze:
                         drawing = ImageDraw.Draw(self.image)
                         drawing.rectangle([rect_start, rect_end], fill='white', outline='white')
                         del drawing
-                    if self.is_right_cell(coord, cell_char):
+                    if self.is_right_cell(coord):
                         offset = 0
                         if coord[1] == self.max_w:
                             offset = self.image_border
@@ -187,7 +203,7 @@ class Maze:
                         drawing = ImageDraw.Draw(self.image)
                         drawing.rectangle([rect_start, rect_end], fill='white', outline='white')
                         del drawing
-                    if self.is_up_cell(coord, cell_char):
+                    if self.is_up_cell(coord):
                         offset = 0
                         if coord[0] == 0:
                             offset = self.image_border
@@ -204,7 +220,7 @@ class Maze:
                         drawing = ImageDraw.Draw(self.image)
                         drawing.rectangle([rect_start, rect_end], fill='white', outline='white')
                         del drawing
-                    if self.is_down_cell(coord, cell_char):
+                    if self.is_down_cell(coord):
                         offset = 0
                         if coord[0] == self.max_h:
                             offset = self.image_border
@@ -221,21 +237,21 @@ class Maze:
                         drawing.rectangle([rect_start, rect_end], fill='white', outline='white')
                         del drawing
 
-    def add_entrance(self, cell_c):
+    def add_entrance(self):
         while True:
             index = int(random.random()*self.max_w)
             coord = (0, index)
-            if self.adj_equal(coord, cell_c) > 0:
-                self.set_cell(coord, cell_c)
+            if self.adj_equal(coord, self.cell) > 0:
+                self.set_cell(coord)
                 self.entrance = coord
                 break
 
-    def add_exit(self, cell_c):
+    def add_exit(self):
         while True:
             index = int(random.random()*self.max_h)
             coord = (self.max_h, index)
-            if self.adj_equal(coord, cell_c) > 0:
-                self.set_cell(coord, cell_c)
+            if self.adj_equal(coord, self.cell) > 0:
+                self.set_cell(coord)
                 self.exit = coord
                 break
 
@@ -248,18 +264,28 @@ class Maze:
         self.image.show()
 
     def solve(self):
-        if not all([self.exit, self.entrance, self.tree_root]):
+        if not all([self.exit, self.entrance]):
             return False
-        here = self.dup(self.entrance)
-        self.tree_root = Node(self.dup(here))
-        prev = self.tree_root
+        self.tree_root = Node(name="root", coord=self.dup(self.entrance))
         ends = list()
         ends.append(self.tree_root)
         solved = False
+        here = None
         while not solved:
-            here =
+            here = random.choice(ends)
+
             # Are we solved?
-            if self.same(here, self.exit):
-                solved = True
+            if self.same(here.coord, self.exit):
                 break
-            for n in self.get_adj_coord_equal(prev):
+            for n in self.get_adj_coord_equal(here.coord, self.cell):
+                ends.append(Node(name=str(n), parent=here, coord=n))
+            ends.remove(here)
+        back_at_start = False
+        solution = list()
+        while not here.is_root:
+            if self.same(here.coord, self.entrance):
+                break
+            solution.append(here.coord)
+            here = here.parent
+        print(solution)
+        print ("finished!")
