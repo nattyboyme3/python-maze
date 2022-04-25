@@ -289,7 +289,7 @@ class SquareMaze:
             solution.append(here.coord)
             here = here.parent
         print(solution)
-        print ("finished!")
+        print("finished!")
 
 
 if __name__ == '__main__':
