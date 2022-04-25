@@ -19,5 +19,5 @@ Generates a PNG maze. Thanks to [Orestis Zekai](https://medium.com/swlh/fun-with
 - Usage:
   `python line_maze.py <maze_height> <maze_width> <iterations>`
 
-##Fair warning: 
+## Fair warning: 
 __This code is horribly inefficient, and large mazes take quite a long time to generate, especially if they are run through many iterations__ 
