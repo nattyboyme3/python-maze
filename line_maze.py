@@ -1,14 +1,16 @@
+import argparse
 import colorama
-from sys import argv
 import random
 from PIL import Image, ImageDraw
-from anytree import Node, search, RenderTree, AsciiStyle, walker
+from anytree import Node, walker
+import sys
 
-debug = False
+
+debug = True
 
 
 class LineMaze:
-    def __init__(self, h, w):
+    def __init__(self, h, w, mode="random", optimize=False):
         self.maze_w = w
         self.maze_h = h
         self.undefined_wall = 'u'
@@ -20,10 +22,17 @@ class LineMaze:
         self.open_wall = ','
         self.solved_path = 'O'
         self.m = None
+        self.mode = mode
+        self.best = [None, 0]
         try:
-            self.build()
+            self.build(mode)
             self.define_maze(self.maze_h, self.maze_w)
-            self.finish(self.maze_w)
+            if optimize:
+                self.finish(self.maze_w, make_exit=False)
+                self.length = self.optimize()
+            else:
+                self.finish(self.maze_w)
+                self.length = self.solve()
         except Exception as e:
             self.print()
             pass
@@ -32,7 +41,6 @@ class LineMaze:
         self.image = None
         self.cell_size = 20
         self.wall_size = 3
-        self.set_up_image()
 
     @staticmethod
     def coord_name(coord):
@@ -53,6 +61,10 @@ class LineMaze:
     def is_odd(x: int):
         return not LineMaze.is_even(x)
 
+    @staticmethod
+    def distance_between(cell_1, cell_2):
+        pass
+
     def get_contents(self, y: int, x: int):
         return self.m[y][x]
 
@@ -65,7 +77,7 @@ class LineMaze:
         else:
             self.set_contents(coords[0], coords[1], content)
 
-    def get_adj_cells(self, y, x):
+    def get_adj_cells(self, y, x, include_borders=False):
         return_list = list()
         if LineMaze.is_odd(x) and LineMaze.is_odd(y):
             # North == Y - 2, assuming y > 2
@@ -75,7 +87,7 @@ class LineMaze:
                 except IndexError:
                     print("Something went wrong")
             # Top row? Check the border:
-            if y == 2:
+            if y == 1:
                 try:
                     return_list.append((y-1, x, self.get_contents(y-1, x)))
                 except IndexError:
@@ -104,17 +116,32 @@ class LineMaze:
                     return_list.append((y, x+2, self.get_contents(y, x+2)))
                 except IndexError:
                     print("Something went wrong")
+        else:
+            # we are in the entrance or exit
+            if include_borders:
+                # Bottom -- one up
+                if y == (len(self.m)-1):
+                    try:
+                        return_list.append((y-1, x, self.get_contents(y-1, x)))
+                    except IndexError:
+                        print("Something went wrong")
+                # Top -- one up
+                if y == 0:
+                    try:
+                        return_list.append((y+1, x, self.get_contents(y+1, x)))
+                    except IndexError:
+                        print("Something went wrong")
         return return_list
 
-    def get_adj_cells_equal(self, y, x, c):
-        cell_list = self.get_adj_cells(y, x)
+    def get_adj_cells_equal(self, y, x, c, include_borders=False):
+        cell_list = self.get_adj_cells(y, x, include_borders)
         return_list = list()
         for i in cell_list:
             if i[2] == c:
                 return_list.append(i)
         return return_list
 
-    def build(self):
+    def build(self, mode='random'):
         self.m = list()
         for i in range(0, self.maze_h*2+1):
             self.m.append(list())
@@ -173,7 +200,7 @@ class LineMaze:
                     print(colorama.Back.BLUE, f'{self.m[i][j]}', end="")
             print('\n', end="")
 
-    def define_maze(self, h, w):
+    def define_maze(self, h, w, mode='random'):
         y = LineMaze.get_rand_cell_coord(h)
         x = LineMaze.get_rand_cell_coord(w)
         self.set_contents(y, x, self.cell)
@@ -182,35 +209,41 @@ class LineMaze:
         for i in adj_cells:
             to_evaluate.append(i)
         while len(to_evaluate) > 0:
-            self.expand(to_evaluate)
+            self.expand(to_evaluate, mode=mode)
 
-    def expand(self, cell_list):
+    def expand(self, cell_list, mode="random"):
         neighbor = None
-        this_cell = random.choice(cell_list)
+        if mode == 'first':
+            this_cell = cell_list[0]
+        elif mode == 'last':
+            this_cell = cell_list[-1]
+        else:
+            this_cell = random.choice(cell_list)
         self.set_contents(this_cell[0], this_cell[1], self.cell)
         evaluated_cells = self.get_adj_cells_equal(this_cell[0], this_cell[1], self.cell)
-        if len(evaluated_cells) < 1:
-            if debug:
-                print("this should be impossible")
-                self.print()
-            pass
-        else:
-            neighbor = random.choice(evaluated_cells)
+        if len(evaluated_cells) > 0:
+            if mode == 'first':
+                neighbor = evaluated_cells[0]
+            elif mode == 'last':
+                neighbor = evaluated_cells[-1]
+            # Random is the default
+            else:
+                neighbor = random.choice(evaluated_cells)
             self.open_interposing_wall(this_cell, neighbor)
         adj_unevaluated_cells = self.get_adj_cells_equal(this_cell[0], this_cell[1], self.unevaluated_cell)
         for i in adj_unevaluated_cells:
             if i not in cell_list:
                 cell_list.append(i)
         cell_list.remove(this_cell)
-        if debug:
-            self.set_contents(neighbor[0], neighbor[1], self.neighbor_cell)
-            self.set_contents(this_cell[0], this_cell[1], self.current_cell)
-            self.print()
-            print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            self.set_contents(this_cell[0], this_cell[1], self.cell)
-            self.set_contents(neighbor[0], neighbor[1], self.cell)
+        # if debug:
+        #     self.set_contents(neighbor[0], neighbor[1], self.neighbor_cell)
+        #     self.set_contents(this_cell[0], this_cell[1], self.current_cell)
+        #     self.print()
+        #     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        #     self.set_contents(this_cell[0], this_cell[1], self.cell)
+        #     self.set_contents(neighbor[0], neighbor[1], self.cell)
 
-    def finish(self, w):
+    def finish(self, w, make_exit=True):
         for i in range(0, len(self.m)):
             for j in range(0, len(self.m[0])):
                 if self.m[i][j] == self.undefined_wall:
@@ -219,15 +252,16 @@ class LineMaze:
         top_x = self.get_rand_cell_coord(w)
         self.set_contents(0, top_x, self.cell)
         # Exit
-        bottom_x = self.get_rand_cell_coord(w)
-        self.set_contents(len(self.m)-1, bottom_x, self.cell)
+        if make_exit:
+            bottom_x = self.get_rand_cell_coord(w)
+            self.set_contents(len(self.m)-1, bottom_x, self.cell)
 
     def find_entrance(self):
         entrance_x = None
         for i in range(0, len(self.m[0])-1):
             if self.m[0][i] == self.cell:
                 entrance_x = i
-        return 0, entrance_x, self.cell
+        return 0, entrance_x
 
     def find_exit(self):
         bottom = len(self.m)-1
@@ -235,12 +269,20 @@ class LineMaze:
         for i in range(0, len(self.m[0])-1):
             if self.m[bottom][i] == self.cell:
                 exit_x = i
-        return bottom, exit_x, self.cell
+        return bottom, exit_x
 
     def solve(self):
         en = self.find_entrance()
+        root = Node(LineMaze.coord_name(en), coord=en)
         ex = self.find_exit()
-        path = self.walk(en, ex)
+        exit_node = self.walk_recurse(root, ex)
+        if not exit_node:
+            pass
+        return self.write_solved_path(root, exit_node)
+
+    def write_solved_path(self, root, exit_node):
+        w = walker.Walker()
+        path = w.walk(root, exit_node)
         count = 0
         for i in path[0]:
             self.set_contents_obj(i.coord, self.solved_path)
@@ -253,43 +295,61 @@ class LineMaze:
             count += 1
         return count
 
-    def walk(self, maze_entrance, maze_exit):
-        to_map = list()
-        root = Node(LineMaze.coord_name(maze_entrance), coord=maze_entrance)
-        last = root
-        to_map.append(((maze_entrance[0]+1, maze_entrance[1], self.cell), maze_entrance))
-        visited = list()
-        while len(to_map) > 0:
-            here = random.choice(to_map)
-            if debug:
-                print(f"visiting {LineMaze.coord_name(here[0])}")
-            parent_node = search.find_by_attr(root, LineMaze.coord_name(here[1]))
-            last = Node(LineMaze.coord_name(here[0]), parent=parent_node, coord=here[0])
-            adj_cells = self.get_adj_cells_equal(here[0][0], here[0][1], self.cell)
-            openings = list()
-            for a in adj_cells:
-                if self.cells_connected(a, here[0]):
-                    openings.append(a)
-            for i in openings:
-                unique = True
-                for j in to_map:
-                    if i[0] == j[0][0] and i[1] == j[0][1]:
-                        unique = False
-                for q in visited:
-                    if i[0] == q[0][0] and i[1] == q[0][1]:
-                        unique = False
-                if unique:
-                    if debug:
-                        print(f"adding connected {LineMaze.coord_name(i)} to visit list")
-                    to_map.append((i, here[0]))
-            visited.append(here)
-            to_map.remove(here)
-            if debug:
-                print(RenderTree(root, style=AsciiStyle()))
+    def optimize(self):
+        en = self.find_entrance()
+        root = Node(LineMaze.coord_name(en), coord=en)
+        self.find_best_recurse(root, 0)
+        exit_node = self.best[0]
+        count = self.write_solved_path(root, exit_node)
+        self.open_exit(exit_node.coord)
+        return count
+
+    def open_exit(self, coord):
+        # Top: Y == 1, open 0,x
+        if coord[0] == 1:
+            self.set_contents(coord[0]-1, coord[1], self.solved_path)
+        # Bottom: Y == max cell, open y+1,x
+        elif coord[0] == len(self.m)-2:
+            self.set_contents(coord[0]+1, coord[1], self.solved_path)
+        # Left: X == 1, open y,0
+        elif coord[1] == 1:
+            self.set_contents(coord[0], coord[1]-1, self.solved_path)
+        # Right: X == max cell, open y,x+1
+        elif coord[1] == len(self.m[0])-2:
+            self.set_contents(coord[0], coord[1]+1, self.solved_path)
+        else:
+            raise RuntimeError(f"Bad Exit selected: {LineMaze.coord_name(coord)}")
+
+    def walk_recurse(self, here: Node, maze_exit: tuple):
+        for i in self.get_adj_cells_equal(here.coord[0], here.coord[1], self.cell, True):
+            if here.parent and LineMaze.coord_name(i) == LineMaze.coord_name(here.parent.coord):
+                continue
+            if not self.cells_connected(i, here.coord):
+                continue
+            new_node = Node(LineMaze.coord_name(i), coord=i, parent=here)
             pass
-        exit_node = search.find_by_attr(root, LineMaze.coord_name(maze_exit))
-        w = walker.Walker()
-        return w.walk(root, exit_node)
+            if LineMaze.coord_name(i) == LineMaze.coord_name(maze_exit):
+                return new_node
+            else:
+                result = self.walk_recurse(new_node, maze_exit)
+                if result:
+                    return result
+
+    def find_best_recurse(self, here: Node, depth=0):
+        if self.is_on_edge(here.coord):
+            if depth > self.best[1]:
+                self.best[0] = here
+                self.best[1] = depth
+        for i in self.get_adj_cells_equal(here.coord[0], here.coord[1], self.cell, True):
+            if here.parent and LineMaze.coord_name(i) == LineMaze.coord_name(here.parent.coord):
+                continue
+            if not self.cells_connected(i, here.coord):
+                continue
+            new_node = Node(LineMaze.coord_name(i), coord=i, parent=here)
+            self.find_best_recurse(new_node, depth+1)
+
+    def is_on_edge(self, coord):
+        return coord[0] == 1 or coord[1] == 1 or coord[0] == len(self.m)-2 or coord[1] == len(self.m[0])-2
 
     def cells_connected(self, cell_1, cell_2):
         # Handle the borders -- cells are directly adjacent
@@ -324,7 +384,8 @@ class LineMaze:
     def show_image(self):
         self.image.show()
 
-    def draw(self, solved=False):
+    def draw(self, solved=False, show=True):
+        self.set_up_image()
         y_index = 0
         for i in range(0, len(self.m)):
             x_index = 0
@@ -373,36 +434,36 @@ class LineMaze:
                 # Update indices
                 x_index = x_end
             y_index = y_end
+        if show:
+            self.show_image()
 
 
 if __name__ == '__main__':
+    sys.setrecursionlimit(10**6)
+    a = argparse.ArgumentParser()
+    a.add_argument('-H', '--height', default=50, type=int, help='how high to make the maze')
+    a.add_argument('-W', '--width', default=50, type=int, help='how wide to make the maze')
+    a.add_argument('-S', '--smart', action="store_true", help='optimize the maze by being smart')
+    a.add_argument('-I', '--iterations', default=5, type=int, help='how many times to try')
+    a.set_defaults(smart=False)
+    args = a.parse_args()
     # Defaults:
-    maze_h = 50
-    maze_w = 50
-    attempts = 15
-    # Args
-    if len(argv) > 1:
-        maze_h = int(argv[1])
-        maze_w = int(argv[1])
-    if len(argv) > 2:
-        maze_w = int(argv[2])
-    if len(argv) > 3:
-        attempts = int(argv[3])
-    # Generate SquareMaze
+    maze_h = args.height
+    maze_w = args.width
+    attempts = args.iterations
+    smart = args.smart
     best_maze = None
+    best_length = 0
     for maze in range(0, attempts):
-        m = LineMaze(maze_h, maze_w)
-        length = m.solve()
-        if not best_maze or length > best_maze[1]:
-            best_maze = (m, length)
+        m = LineMaze(maze_h, maze_w, 'first', optimize=args.smart)
+        length = m.length
+        if not best_maze or length > best_length:
+            best_maze = m
+            best_length = length
             print(f"\nnew best: {length}")
         else:
             print('.', end='')
     print("\n")
-    # best_maze[0].print()
-    best_maze[0].draw(solved=True)
-    best_maze[0].show_image()
-    best_maze[0].set_up_image()
-    best_maze[0].draw(solved=False)
-    best_maze[0].show_image()
-    print(f"done: best quality {best_maze[1]}")
+    best_maze.draw(solved=True)
+    best_maze.draw(solved=False)
+    print(f"done: best quality {best_maze.length}")
