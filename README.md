@@ -17,10 +17,14 @@ Generates a PNG maze. Thanks to [Orestis Zekai](https://medium.com/swlh/fun-with
 
 ### Multithreaded Line Maze Generator
 - Generates line mazes, using smart mode
-- Set parameters in file before running!
-- Not polished yet, but currently the best maze generator in this repo. 
-- Usage: 
-  `python multithreaded_maze.py`
+- May melt CPU's
+- Defaults are:
+  - 50 by 50 maze
+  - iterated 100 times
+  - 10 threads
+- Currently the best maze generator in this repo. 
+- Usage:
+  `python multithreaded_maze.py [-H <maze_height>] [-W <maze_width>] [-I <iterations> -T <threads> ]`
 
 #### Line Maze Example:
 ![A Line Maze generated using multithreading](examples/50x50_maze.PNG?raw=true "Multi-Threaded Line Maze Example")
