@@ -22,6 +22,12 @@ Generates a PNG maze. Thanks to [Orestis Zekai](https://medium.com/swlh/fun-with
 - Usage: 
   `python multithreaded_maze.py`
 
+#### Line Maze Example:
+![A Line Maze generated using multithreading](examples/50x50_maze.PNG?raw=true "Multi-Threaded Line Maze Example")
+
+#### Line Maze Example:
+![The solution of the line maze above](examples/50x50_maze_solution.PNG?raw=true "Line Maze Solution Example")
+
 ### Square maze
 - Kept for historical purposes only. Don't use this. It probably doesn't even work.
 - Grid
