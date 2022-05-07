@@ -13,8 +13,19 @@ Generates a PNG maze. Thanks to [Orestis Zekai](https://medium.com/swlh/fun-with
   - Iteration is currently very simple -- it's set to maximize the length of the solved path
 - Smart Mode: Turn on for generating smarter mazes, that make up more of the area
 - Usage:
-  `python line_maze.py [-S] (smart mode) [-H <maze_height>] [-W <maze_width>] [-I <iterations> ]`
+```
+usage: line_maze.py [-h] [-H HEIGHT] [-W WIDTH] [-S] [-I ITERATIONS]
 
+optional arguments:
+  -h, --help            show this help message and exit
+  -H HEIGHT, --height HEIGHT
+                        how high to make the maze
+  -W WIDTH, --width WIDTH
+                        how wide to make the maze
+  -S, --smart           optimize the maze by being smart
+  -I ITERATIONS, --iterations ITERATIONS
+                        how many times to try
+```
 ### Multithreaded Line Maze Generator
 - Generates line mazes, using smart mode
 - May melt CPU's
@@ -24,7 +35,21 @@ Generates a PNG maze. Thanks to [Orestis Zekai](https://medium.com/swlh/fun-with
   - 10 threads
 - Currently the best maze generator in this repo. 
 - Usage:
-  `python multithreaded_maze.py [-H <maze_height>] [-W <maze_width>] [-I <iterations> -T <threads> ]`
+ ```
+usage: multithreaded_maze.py [-h] [-H HEIGHT] [-W WIDTH] [-I ITERATIONS] [-T THREADS]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -H HEIGHT, --height HEIGHT
+                        how high to make the maze
+  -W WIDTH, --width WIDTH
+                        how wide to make the maze
+  -I ITERATIONS, --iterations ITERATIONS
+                        how many times to try
+  -T THREADS, --threads THREADS
+                        how many threads to spawn
+
+```
 
 #### Line Maze Example:
 ![A Line Maze generated using multithreading](examples/50x50_maze.PNG?raw=true "Multi-Threaded Line Maze Example")

@@ -21,7 +21,7 @@ if __name__ == '__main__':
     a.add_argument('-H', '--height', default=50, type=int, help='how high to make the maze')
     a.add_argument('-W', '--width', default=50, type=int, help='how wide to make the maze')
     a.add_argument('-I', '--iterations', default=100, type=int, help='how many times to try')
-    a.add_argument('-T', '--threads', default=10, type=int, help='how many times to try')
+    a.add_argument('-T', '--threads', default=10, type=int, help='how many threads to spawn')
     args = a.parse_args()
     q = Queue(maxsize=0)
     lengths = list()
