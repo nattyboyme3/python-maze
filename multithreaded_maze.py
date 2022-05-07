@@ -56,4 +56,4 @@ if __name__ == '__main__':
     e_time = int(end - start)
     a_time = float(e_time) / args.iterations
     print(f"Generated {args.iterations} {args.height} by {args.width} mazes in {e_time} seconds "
-          f"using {args.threads} threads, average {a_time} seconds")
+          f"using {args.threads} threads, average {a_time} seconds, solution length: {lengths[best]}")
