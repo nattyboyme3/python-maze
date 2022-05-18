@@ -1,0 +1,2 @@
+from python_maze_generator.line_maze import LineMaze
+from python_maze_generator.multithreaded_maze import generate_mazes
